@@ -239,7 +239,9 @@ int main (int argc, char **argv)
     /* register all formats and codecs */
     av_register_all();
 
+#ifdef __AFL_HAVE_MANUAL_CONTROL
     while (__AFL_LOOP(1000))
+#endif
     {
         AVFormatContext *fmt_ctx = NULL;
         AVInputFormat *fmt       = NULL;
