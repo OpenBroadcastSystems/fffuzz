@@ -204,6 +204,7 @@ static int open_codec_context(AVCodecContext **dec_ctx, AVFormatContext *fmt_ctx
         if ((ret = avcodec_open2(*dec_ctx, dec, &opts)) < 0) {
             fprintf(stderr, "Failed to open decoder\n");
         }
+        av_dict_free(&opts);
     }
 
     return ret;
@@ -249,6 +250,7 @@ int main (int argc, char **argv)
         int frame_count          = 0;
         AVPacket pkt             = { 0 };
         AVDictionary *opts       = NULL;
+        ret = 0;
         width = 0;
         height = 0;
         pix_fmt = AV_PIX_FMT_NONE;
@@ -259,25 +261,29 @@ int main (int argc, char **argv)
         /* set the whitelists for formats and codecs */
         if (av_dict_set(&opts, "codec_whitelist", codec, 0) < 0) {
             fprintf(stderr, "Could not set codec_whitelist.\n");
-            exit(1);
+            ret = 1;
+            goto end;
         }
         if (av_dict_set(&opts, "format_whitelist", format, 0) < 0) {
             fprintf(stderr, "Could not set format_whitelist.\n");
-            exit(1);
+            ret = 1;
+            goto end;
         }
 
         if (format) {
             fmt = av_find_input_format(format);
             if (!fmt) {
                 fprintf(stderr, "Could not find input format %s\n", format);
-                exit(1);
+                ret = 1;
+                goto end;
             }
         }
 
         /* open input file, and allocate format context */
         if (avformat_open_input(&fmt_ctx, src_filename, fmt, &opts) < 0) {
             fprintf(stderr, "Could not open source file %s\n", src_filename);
-            exit(1);
+            ret = 1;
+            goto end;
         }
 
         /* retrieve stream information */
@@ -352,6 +358,7 @@ int main (int argc, char **argv)
 
 end:
         /* free allocated memory */
+        av_dict_free(&opts);
         avcodec_close(dec_ctx);
         avformat_close_input(&fmt_ctx);
         if (dst_file)
