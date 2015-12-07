@@ -214,7 +214,6 @@ int main (int argc, char **argv)
     int ret = 0;
     const char *src_filename = NULL;
     const char *dst_filename = NULL;
-    AVDictionary *opts       = NULL;
     char* format             = NULL;
     char* codec              = NULL;
 
@@ -239,16 +238,6 @@ int main (int argc, char **argv)
     /* register all formats and codecs */
     av_register_all();
 
-    /* set the whitelists for formats and codecs */
-    if (av_dict_set(&opts, "codec_whitelist", codec, 0) < 0) {
-        fprintf(stderr, "Could not set codec_whitelist.\n");
-        exit(1);
-    }
-    if (av_dict_set(&opts, "format_whitelist", format, 0) < 0) {
-        fprintf(stderr, "Could not set format_whitelist.\n");
-        exit(1);
-    }
-
     while (__AFL_LOOP(1000))
     {
         AVFormatContext *fmt_ctx = NULL;
@@ -259,14 +248,23 @@ int main (int argc, char **argv)
         int got_frame            = 0;
         int frame_count          = 0;
         AVPacket pkt             = { 0 };
-        opts                     = NULL;
-        format                   = NULL;
-        codec                    = NULL;
+        AVDictionary *opts       = NULL;
         width = 0;
         height = 0;
+        pix_fmt = AV_PIX_FMT_NONE;
         video_dst_bufsize = 0;
         memset(video_dst_data, 0, sizeof(video_dst_data));
         memset(video_dst_linesize, 0, sizeof(video_dst_linesize));
+
+        /* set the whitelists for formats and codecs */
+        if (av_dict_set(&opts, "codec_whitelist", codec, 0) < 0) {
+            fprintf(stderr, "Could not set codec_whitelist.\n");
+            exit(1);
+        }
+        if (av_dict_set(&opts, "format_whitelist", format, 0) < 0) {
+            fprintf(stderr, "Could not set format_whitelist.\n");
+            exit(1);
+        }
 
         if (format) {
             fmt = av_find_input_format(format);
