@@ -28,6 +28,7 @@
  * This can be useful for fuzz testing.
  * @example ddcf.c
  */
+#include <string.h>
 
 #include <libavutil/avstring.h>
 #include <libavutil/imgutils.h>
@@ -210,27 +211,91 @@ static int open_codec_context(AVCodecContext **dec_ctx, AVFormatContext *fmt_ctx
     return ret;
 }
 
+void exit_with_usage_msg(char* prog_name)
+{
+    fprintf(stderr, "\n"
+                "usage: %s [options] input_file output_file\n\n"
+                "API example program to show how to read frames from an input file.\n"
+                "This program reads frames from a file, decodes them, and writes decoded\n"
+               "frames to a rawvideo/rawaudio file named output_file.\n"
+                "Optionally format and codec can be specified.\n\n"
+                "Options:\n"
+                "-f format\n"
+                "\tSets the decode format\n"
+                "-c codec\n"
+                "\tSets the decode codec\n\n", prog_name);
+    exit(1);
+}
+
 int main (int argc, char **argv)
 {
-    int ret = 0;
+    int ret = 0, current_arg;
+    char option;
     const char *src_filename = NULL;
     const char *dst_filename = NULL;
     char* format             = NULL;
     char* codec              = NULL;
+    char* arg                = NULL;
+    char* parameter          = NULL;
 
-    if (argc != 5 && argc != 3) {
-        fprintf(stderr, "usage: %s input_file output_file [format codec]\n"
-                "API example program to show how to read frames from an input file.\n"
-                "This program reads frames from a file, decodes them, and writes decoded\n"
-                "frames to a rawvideo/rawaudio file named output_file.\n"
-                "Optionally format and codec can be specified.\n\n", argv[0]);
-        exit(1);
-    }
-    src_filename = argv[1];
-    dst_filename = argv[2];
-    if (argc == 5) {
-        format = argv[3];
-        codec  = argv[4];
+    if (argc < 3) {
+        fprintf(stderr,
+                    "%s: No input_file and/or output_file found\n", argv[0]);
+        exit_with_usage_msg(argv[0]);
+     }
+
+    /* parse all arguments passed to program */
+    for (current_arg = 1; current_arg < argc; current_arg++) {
+        arg = argv[current_arg];
+        if (arg[0] == '-') { //parse an option
+            if (strlen(arg) != 2) {
+                fprintf(stderr, "%s: Invalid option %s\n", argv[0], arg);
+                exit_with_usage_msg(argv[0]);
+            }
+            /* make sure we will be able to see input_file */
+            /* and output_file after option is parsed */
+            if (current_arg + 3 >= argc) {
+                fprintf(stderr,
+                            "%s: No input_file and/or output_file found\n", argv[0]);
+                exit_with_usage_msg(argv[0]);
+            }
+            option = arg[1];
+            current_arg++;
+            parameter = argv[current_arg];
+            /* parameter can't be an option */
+            if (parameter[0] == '-') {
+                fprintf(stderr,
+                            "%s: No parameter for -%c option found\n",
+                            argv[0], option);
+                exit_with_usage_msg(argv[0]);
+            }
+            switch (option) {
+            case 'f':
+                format = parameter;
+                break;
+            case 'c':
+                codec = parameter;
+                break;
+            default:
+                fprintf(stderr, "%s: Invalid option %s\n", argv[0], arg);
+                exit_with_usage_msg(argv[0]);
+            }
+        } else { //all options set, parse input_file and output_file
+            if (current_arg + 1 != argc - 1) {
+                fprintf(stderr,
+                            "%s: input_file and output_file should be passed as final arguments\n",
+                            argv[0]);
+                exit_with_usage_msg(argv[0]);
+            }
+            src_filename = argv[current_arg];
+            current_arg++;
+            dst_filename = argv[current_arg];
+            if (dst_filename[0] == '-') {
+                fprintf(stderr,
+                            "%s: No output_file found\n", argv[0]);
+                exit_with_usage_msg(argv[0]);
+            }
+        }
     }
 
     /* log all debug messages */
