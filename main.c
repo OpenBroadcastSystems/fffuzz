@@ -223,7 +223,9 @@ void exit_with_usage_msg(char* prog_name)
                 "-f format\n"
                 "\tSets the decode format\n"
                 "-c codec\n"
-                "\tSets the decode codec\n\n", prog_name);
+                "\tSets the decode codec\n"
+                "-t slice|frame\n"
+                "\tSets threading mode (slice or frame threads)\n\n", prog_name);
     exit(1);
 }
 
@@ -235,8 +237,11 @@ int main (int argc, char **argv)
     const char *dst_filename = NULL;
     char* format             = NULL;
     char* codec              = NULL;
+    char* thread_mode        = NULL;
     char* arg                = NULL;
     char* parameter          = NULL;
+    char frame_threads[]     = "frame";
+    char slice_threads[]     = "slice";
 
     if (argc < 3) {
         fprintf(stderr,
@@ -276,6 +281,9 @@ int main (int argc, char **argv)
             case 'c':
                 codec = parameter;
                 break;
+            case 't':
+                thread_mode = parameter;
+                break;
             default:
                 fprintf(stderr, "%s: Invalid option %s\n", argv[0], arg);
                 exit_with_usage_msg(argv[0]);
@@ -295,6 +303,16 @@ int main (int argc, char **argv)
                             "%s: No output_file found\n", argv[0]);
                 exit_with_usage_msg(argv[0]);
             }
+        }
+    }
+
+    /* if thread_mode was passed, verify its value */
+    if (thread_mode != NULL) {
+        if (strcmp(thread_mode, frame_threads) && strcmp(thread_mode, slice_threads)) {
+            fprintf(stderr,
+                        "%s: wrong thread mode passed using -t flag\n",
+                        argv[0]);
+            exit_with_usage_msg(argv[0]);
         }
     }
 
@@ -333,6 +351,12 @@ int main (int argc, char **argv)
         }
         if (av_dict_set(&opts, "format_whitelist", format, 0) < 0) {
             fprintf(stderr, "Could not set format_whitelist.\n");
+            ret = 1;
+            goto end;
+        }
+        /* set threading mode */
+        if (av_dict_set(&opts, "thread_type", thread_mode, 0) < 0) {
+            fprintf(stderr, "Could not set thread_type.\n");
             ret = 1;
             goto end;
         }
